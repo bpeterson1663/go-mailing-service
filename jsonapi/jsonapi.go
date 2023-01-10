@@ -1,7 +1,12 @@
 package jsonapi
 
 import (
+	"bytes"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"io"
+	"log"
 	"mailingservice/mdb"
 	"net/http"
 )
@@ -13,10 +18,10 @@ func setJsonHeader(w http.ResponseWriter) {
 func fromJson[T any](body io.Reader, target T) {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(body)
-	json.Unmarshal(buf.Bytes(), & target)
+	json.Unmarshal(buf.Bytes(), &target)
 }
 
-func returnJson[T any](w http.http.ResponseWriter, withData func() (T, error)) {
+func returnJson[T any](w http.ResponseWriter, withData func() (T, error)) {
 	setJsonHeader(w)
 
 	data, serverErr := withData()
@@ -28,11 +33,11 @@ func returnJson[T any](w http.http.ResponseWriter, withData func() (T, error)) {
 			log.Println(err)
 			return
 		}
-		w.Write(serverErrorJson)
+		w.Write(serverErrJson)
 		return
 	}
 
-	dataJson, err := jsonMarshal(&data)
+	dataJson, err := json.Marshal(&data)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(500)
@@ -46,7 +51,7 @@ func returnErr(w http.ResponseWriter, err error, code int) {
 	returnJson(w, func() (interface{}, error) {
 		errorMessage := struct {
 			Err string
-		} {
+		}{
 			Err: err.Error(),
 		}
 		w.WriteHeader(code)
@@ -100,7 +105,7 @@ func UpdateEmail(db *sql.DB) http.Handler {
 		entry := mdb.EmailEntry{}
 		fromJson(req.Body, &entry)
 
-		if err := mdb.UpdateEmail(db, entry.Email); err != nil {
+		if err := mdb.UpdateEmail(db, entry); err != nil {
 			returnErr(w, err, 400)
 			return
 		}
@@ -139,11 +144,11 @@ func GetEmailBatch(db *sql.DB) http.Handler {
 			return
 		}
 
-		queryOptions := mdb.GetEmailBatchQueryParams
+		queryOptions := mdb.GetEmailBatchQueryParams{}
 		fromJson(req.Body, &queryOptions)
 
 		if queryOptions.Count <= 0 || queryOptions.Page <= 0 {
-			returnErr(w, errors.New("Page and Count fields are required and must be > 0 ", 400))
+			returnErr(w, errors.New("page and count fields are required and must be > 0 "), 400)
 			return
 		}
 
@@ -158,10 +163,11 @@ func Serve(db *sql.DB, bind string) {
 	http.Handle("email/create", CreateEmail(db))
 	http.Handle("email/get", GetEmail(db))
 	http.Handle("email/get_batch", GetEmailBatch(db))
-	http.Handle("email/update", Update(db))
+	http.Handle("email/update", UpdateEmail(db))
 	http.Handle("email/delete", DeleteEmail(db))
+	log.Printf("JSON API serve listening on %v\n", bind)
 	err := http.ListenAndServe(bind, nil)
 	if err != nil {
-		log.FatalF("JSON server error: %v", err)
+		log.Fatalf("JSON server error: %v", err)
 	}
 }
