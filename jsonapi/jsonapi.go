@@ -160,11 +160,11 @@ func GetEmailBatch(db *sql.DB) http.Handler {
 }
 
 func Serve(db *sql.DB, bind string) {
-	http.Handle("email/create", CreateEmail(db))
-	http.Handle("email/get", GetEmail(db))
-	http.Handle("email/get_batch", GetEmailBatch(db))
-	http.Handle("email/update", UpdateEmail(db))
-	http.Handle("email/delete", DeleteEmail(db))
+	http.Handle("/email/create", CreateEmail(db))
+	http.Handle("/email/get", GetEmail(db))
+	http.Handle("/email/get_batch", GetEmailBatch(db))
+	http.Handle("/email/update", UpdateEmail(db))
+	http.Handle("/email/delete", DeleteEmail(db))
 	log.Printf("JSON API serve listening on %v\n", bind)
 	err := http.ListenAndServe(bind, nil)
 	if err != nil {
