@@ -91,7 +91,7 @@ func (s *MailServer) CreateEmail(ctx context.Context, req *pb.CreateEmailRequest
 func (s *MailServer) UpdateEmail(ctx context.Context, req *pb.UpdateEmailRequest) (*pb.EmailResponse, error) {
 	log.Printf("gRPC UpdateEmail: %v\n", req)
 
-	entry := pbEntryToMdbEntry(req.EmailAddr)
+	entry := pbEntryToMdbEntry(req.EmailEntry)
 
 	err := mdb.UpdateEmail(s.db, entry)
 	if err != nil {
